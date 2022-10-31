@@ -19,3 +19,22 @@ knitr::include_graphics("./media/chickenwing.jpeg")
 
 ```
 
+# adding a gif
+
+```{r}
+knitr::include_graphics("./media/pizza.gif")
+```
+
+
+
+## Here's some links
+
+ [About me](https://jaredlundrigan.github.io/aboutme/)
+ 
+ [My CV](https://jaredlundrigan.github.io/aboutme/CV.pdf)
+ 
+ 
+ 
+ 
+ 
+ 
