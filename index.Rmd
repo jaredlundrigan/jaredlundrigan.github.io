@@ -1,40 +1,804 @@
 ---
-output: html_document
-pagetitle: whatever
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: true
+    theme: cerulean
+pagetitle: Predicting Elections Using Google Trends Data
 ---
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
 
+```{r, echo = TRUE}
 library(tidyverse)
 library(knitr)
-
+library(gtrendsR)
+library(purrr)
 ```
 
-Here's my website.
-
-```{r fig.align='center', fig.width=5,fig.height=5}
-
-knitr::include_graphics("./media/chickenwing.jpeg")
-
-```
-
-# adding a gif
-
-```{r}
-knitr::include_graphics("./media/pizza.gif")
+```{r, echo = TRUE}
+# loading all the csv files together and combining
+df <- list.files(pattern = ".csv") %>% 
+  lapply(read_csv) %>% 
+  bind_rows()
 ```
 
 
+```{r, echo = TRUE}
+az <- df %>% filter(geo == "US-AZ")
+nv <- df %>% filter(geo == "US-NV")
+wi <- df %>% filter(geo == "US-WI")
+nc <- df %>% filter(geo == "US-NC")
+nh <- df %>% filter(geo == "US-NH")
+pa <- df %>% filter(geo == "US-PA")
+ga <- df %>% filter(geo == "US-GA")
+oh <- df %>% filter(geo == "US-OH")
+wa <- df %>% filter(geo == "US-WA")
+ut <- df %>% filter(geo == "US-UT")
+fl <- df %>% filter(geo == "US-FL")
+ky <- df %>% filter(geo == "US-KY")
+```
 
-## Here's some links
+# Predicting US Senate Elections (2022) Using Google Trends
 
- [About me](https://jaredlundrigan.github.io/aboutme/)
- 
- [My CV](https://jaredlundrigan.github.io/aboutme/CV.pdf)
- 
- 
- 
- 
- 
- 
+In this analysis, we will look at 12 key Senate races in the 2022 election. Using Google Trends, I will analyze people's searches to see if it might shed light on how a candidate will perform in their election. I hope to determine whether Google Trends data is a useful tool to be used alongside standard polling data.
+
+This is an example of using Google Trends to see what searches are more popular:
+
+```{r, fig.align='center', fig.width=2.66,fig.height=1.39}
+knitr::include_graphics("googletrendsscreenshot.png")
+```
+
+I will be using this tool to analyze how popular certain Google searches for different candidates are.
+
+This analysis is based on the theory that the specific type of keyword searches matter in trying to determine how a candidate might perform. Keywords such as simply comparing a candidate's name to another have been shown to be inaccurate in predicting election outcomes. Take the 2022 Georgia senate race for example. "Herschel Walker" was searched for almost 3x as much on average as "Raphael Warnock" yet Warnock walked away the winner of the election.
+
+```{r, echo = TRUE}
+ww <- gtrends(c("Herschel Walker",
+                "Raphael Warnock"),
+              geo = "US-GA", 
+              time = "2022-09-08 2022-11-08",
+              low_search_volume = TRUE,
+              onlyInterest = TRUE) 
+
+ww_iot <- ww[["interest_over_time"]]
+
+ww_iot %>% 
+  ggplot(aes(x=date,
+             y=hits,
+             color=keyword)) +
+  geom_line() +
+  theme_classic() +
+  labs(title = "Walker vs Warnock") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+scale_color_manual(values=c('Red','Blue'))
+
+```
+
+There are many reasons why the number of Google searches for a candidate's name may not indicate how many people would vote for them. Herschel Walker is famous for being a running back in the NFL and is also considered one of the greatest running backs in college football history. So the search volume for a candidate's name is not a reliable predictor in voter turnout for that candidate.
+
+Instead, I will use a different method, which involves analyzing the order a candidate's name appears in Google searches that have the names of both candidates. For example, someone searching "Walker Warnock polls", or "Warnock Walker election" might indicate who they may vote for. Seth Stephen-Davidowitz, American data scientist and author, and who created this keyword search strategy, explains in an [article](https://newsroom.ucla.edu/stories/ucla-faculty-voice-can-google-searches-predict-elections) for UCLA newsroom: "Our research suggests that a person is significantly more likely to put the candidate they support first in a search that includes both candidates’ names." So the order in which the candidates were searched could indicate who will win the state.
+
+If you live in Georgia and are planning on voting for Raphael Warnock, you might search "Warnock Walker polls" rather than "Walker Warnock polls" because people often subconsciously place the name of their preferred candidate first in a search.
+
+So I will analyze search terms like this and then compare it with just the names switched followed by "polls" or "election" and other terms in order to gauge likely votes for each candidate.
+
+## How the Data is Gathered:
+
+```{r, eval = FALSE, echo = TRUE}
+GA <- gtrends(c("Walker Warnock polls",
+                "Warnock Walker polls"),
+              geo = "US-GA", 
+              time = "2022-10-08 2022-12-07",
+              low_search_volume = TRUE,
+              onlyInterest = TRUE)
+
+GA_iot <- GA[["interest_over_time"]]
+```
+
+I pulled the search data from searches for the terms "Walker Warnock polls" and "Warnock Walker polls" from within the state of Georgia during the 2 months before the election runoff on December 7th, 2022. I also pulled keyword search data from terms such as:
+- "Walker Warnock election"
+- "Warnock Walker debate"
+- "Walker vs Warnock"
+- "Warnock vs Walker polls"
+- "Herschel Walker vs Raphael Warnock"
+- "Raphael Warnock vs Herschel Walker polls
+
+The idea is that, the more search terms you are able to analyze, the more accurate the outcome of the analysis will be. 
+
+## Analysis of 12 Key Senate Elections
+
+We will compare my Google Trends analysis with polling data and determine if my keyword strategy using Google Trends is a viable tool to be used alongside polling data to predict elections. 
+
+All polling data comes from fivethirtyeight.com and shows the average of polls.
+
+The 'Average Google Searches" you'll see in the tables below or the "hits" you'll see along the y-axis of the graphs indicate how many Google searches for each candidate - where their name came up first. The Google searches or "hits" or based on a scale of 1-100, where the higher the number, the more search interest in a particular term.
+
+Here are the results of the analysis on all the keywords I pulled from Google Trends for each candidate:
+
+<br>
+
+### Georgia senate race: Raphael Warnock vs Herschel Walker
+
+```{r, echo = TRUE}
+tab_ww <- matrix(c(50.8, 47.1, 3.7, 51.4, 48.6, 2.8), ncol=3, byrow=TRUE)
+colnames(tab_ww) <- c('Warnock','Walker','Spread')
+rownames(tab_ww) <- c('Polls','Results')
+tab_ww <- as.table(tab_ww)
+tab_ww
+```
+
+Walker actually slightly outperformed his polling. Notice the surge in Walker's search hits around the last week before the election, indicating that Walker might perform slightly better than his polling numbers. 
+
+```{r, echo = TRUE}
+ga_1 <- ga %>% pivot_wider(names_from = keyword, values_from = hits)
+ga_2 <- ga_1 %>% pivot_longer(cols = c("Walker Warnock polls","Herschel Walker vs Raphael Warnock",
+                                       "Walker vs Warnock polls 538",
+                                       "Walker vs Warnock polls real clear politics",
+                                       "Walker Warnock debate","Walker vs Warnock results",
+                                       "Walker Warnock election",
+                                       "Walker vs Warnock","Walker vs Warnock debate",
+                                       "Walker vs Warnock election","Walker vs Warnock polls",
+                                       "Herschel Walker Raphael Warnock polls"),
+                              names_to = "Walker",
+                              values_to = "Walker_hits")
+ga_3 <- ga_2 %>% pivot_longer(cols = c("Warnock Walker polls","Raphael Warnock vs Herschel Walker",
+                                       "Warnock vs Walker polls 538",
+                                       "Warnock vs Walker polls real clear politics",
+                                       "Warnock vs Walker results","Warnock Walker debate",
+                                       "Warnock Walker election","Warnock vs Walker",
+                                       "Warnock vs Walker debate","Warnock vs Walker election",
+                                       "Warnock vs Walker polls","Raphael Warnock Herschel Walker polls"),
+                              names_to = "Warnock",
+                              values_to = "Warnock_hits")
+ga_4 <- ga_3 %>% pivot_longer(cols = c("Walker_hits", "Warnock_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+ga_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date",y="hits",title = "Walker vs Warnock", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("Herschel Walker","Raphael Warnock"))
+
+ga_mean <- ga_3 %>% 
+  summarize(mean_walker = mean(Walker_hits, na.rm = TRUE),
+            mean_warnock = mean(Warnock_hits, na.rm = TRUE))
+
+tab_ga_mean <- matrix(c(5.54,6.61), ncol=2, byrow=TRUE)
+colnames(tab_ga_mean) <- c('Walker','Warnock')
+rownames(tab_ga_mean) <- c('Average Google Searches')
+tab_ga_mean <- as.table(tab_ga_mean)
+tab_ga_mean
+```
+
+My Google Trends keyword analysis was able to successfully predict that Warnock would be the victor of the senate race. Warnock had an average search interest of 6.61 compared to Walker's 5.54, indicating that there was a high chance Warnock would win the senate race. Note: Google Trends ranks searches on a scale of 1-100, depending on the relative amount of search interest.
+
+<br>
+
+### Wisconsin senate race: Ron Johnson vs Mandela Barnes
+
+```{r, echo = TRUE}
+tab_jb <- matrix(c(50.4,47,3.4,50.5,49.5,1), ncol=3, byrow=TRUE)
+colnames(tab_jb) <- c('Johnson','Barnes','Spread')
+rownames(tab_jb) <- c('Polls','Results')
+tab_jb <- as.table(tab_jb)
+tab_jb
+```
+
+Barnes performed slightly better than expected and Google searches do show a late surge in searches for keywords beginning with Barnes' name.
+
+```{r, echo = TRUE}
+wi_1 <- wi %>% pivot_wider(names_from = keyword, values_from = hits)
+wi_2 <- wi_1 %>% pivot_longer(cols = c("Johnson Barnes polls","Ron Johnson vs Mandela Barnes",
+                                       "Johnson Barnes debate", "Johnson Barnes election",
+                                       "Johnson vs Barnes","Johnson vs Barnes debate", "Johnson vs Barnes polls",
+                                       "Ron Johnson Mandela Barnes polls","Ron Johnson vs Mandela Barnes polls"),
+                              names_to = "Johnson",
+                              values_to = "Johnson_hits")
+wi_3 <- wi_2 %>% pivot_longer(cols = c("Mandela Barnes vs Ron Johnson","Barnes Johnson polls",
+                                       "Barnes Johnson debate","Barnes Johnson election",
+                                       "Barnes vs Johnson","Barnes vs Johnson debate",
+                                       "Barnes vs Johnson polls","Mandela Barnes Ron Johnson polls",
+                                       "Mandela Barnes vs Ron Johnson polls"),
+                              names_to = "Barnes",
+                              values_to = "Barnes_hits")
+wi_4 <- wi_3 %>% pivot_longer(cols = c("Johnson_hits", "Barnes_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+wi_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date", y="hits",title = "Johnson vs Barnes", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("Mandela Barnes","Ron Johnson"))
+
+wi_mean <- wi_3 %>% 
+  summarize(mean_b = mean(Barnes_hits),
+            mean_j = mean(Johnson_hits))
+
+tab_wi_mean <- matrix(c(8.61,9.03), ncol=2, byrow=TRUE)
+colnames(tab_wi_mean) <- c('Barnes','Johnson')
+rownames(tab_wi_mean) <- c('Average Google Searches')
+tab_wi_mean <- as.table(tab_wi_mean)
+tab_wi_mean
+```
+
+My analysis rightly predicted Johnson would be win the race, although not by much.
+
+<br>
+
+### New Hampshire senate race: Maggie Hassan vs Donald Bolduc
+
+```{r, echo = TRUE}
+tab_hb <- matrix(c(48.8,46.6,2.2,53.6,44.4,9.2), ncol=3, byrow=TRUE)
+colnames(tab_hb) <- c('Hassan','Bolduc','Spread')
+rownames(tab_hb) <- c('Polls','Results')
+tab_hb <- as.table(tab_hb)
+tab_hb
+```
+
+In this race, Hassan performed very well and outperformed her polling numbers by 7%. 
+
+```{r, echo = TRUE}
+nh_1 <- nh %>% pivot_wider(names_from = keyword, values_from = hits)
+nh_2 <- nh_1 %>% pivot_longer(cols = c("Hassan Bolduc polls",
+                                       "Hassan Bolduc debate","Hassan Bolduc election",
+                                       "Hassan vs Bolduc"),
+                              names_to = "Hassan",
+                              values_to = "Hassan_hits")
+nh_3 <- nh_2 %>% pivot_longer(cols = c("Bolduc Hassan polls",
+                                       "Bolduc Hassan debate","Bolduc Hassan election",
+                                       "Bolduc vs Hassan"),
+                              names_to = "Bolduc",
+                              values_to = "Bolduc_hits")
+nh_4 <- nh_3 %>% pivot_longer(cols = c("Hassan_hits", "Bolduc_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+nh_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date", y="hits", title = "Bolduc vs Hassan", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("Donald Bolduc","Maggie Hassan"))
+
+nh_mean <- nh_3 %>% 
+  summarize(mean_h = mean(Hassan_hits),
+            mean_b = mean(Bolduc_hits))
+
+tab_nh_mean <- matrix(c(8.64,6.65), ncol=2, byrow=TRUE)
+colnames(tab_nh_mean) <- c('Hassan','Bolduc')
+rownames(tab_nh_mean) <- c('Average Google Searches')
+tab_nh_mean <- as.table(tab_nh_mean)
+tab_nh_mean
+
+```
+
+Google Trends data accurately predicted the outcome of this election and also showed a late surge in interest for Hassan, indicating she might outperform her polling.
+
+<br>
+
+### Arizona senate race: Mark Kelly vs Blake Masters
+
+```{r, echo = TRUE}
+tab_km <- matrix(c(48.6, 47.1, 1.5, 51.4, 46.5, 4.9), ncol=3, byrow=TRUE)
+colnames(tab_km) <- c('Kelly','Masters','Spread')
+rownames(tab_km) <- c('Polls','Results')
+tab_km <- as.table(tab_km)
+tab_km
+```
+
+Obviously this race was going to be very tight, and it was, but Kelly actually slightly outperformed his polling numbers. I wanted to see if Google searches would reflect that.
+
+```{r, echo = TRUE}
+az_1 <- az %>% pivot_wider(names_from = keyword, values_from = hits)
+az_2 <- az_1 %>% pivot_longer(cols = c("Kelly Masters polls", "Mark Kelly vs Blake Masters", 
+                                       "Kelly Masters debate", "Kelly Masters election", 
+                                       "Kelly vs Masters", "Kelly vs Masters debate"),
+                              names_to = "Kelly",
+                              values_to = "Kelly_hits")
+az_3 <- az_2 %>% pivot_longer(cols = c("Masters Kelly polls","Blake Masters vs Mark Kelly",
+                                       "Masters Kelly debate", "Masters Kelly election",
+                                       "Masters vs Kelly", "Masters vs Kelly debate"),
+                              names_to = "Masters",
+                              values_to = "Masters_hits")
+az_4 <- az_3 %>% pivot_longer(cols = c("Masters_hits", "Kelly_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+az_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date", y="hits", title = "Masters vs Kelly", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("Mark Kelly","Blake Masters"))
+
+az_mean <- az_3 %>% 
+  summarize(mean_k = mean(Kelly_hits),
+            mean_m = mean(Masters_hits))
+
+tab_az_mean <- matrix(c(10.71,8.62), ncol=2, byrow=TRUE)
+colnames(tab_az_mean) <- c('Kelly','Masters')
+rownames(tab_az_mean) <- c('Average Google Searches')
+tab_az_mean <- as.table(tab_az_mean)
+tab_az_mean
+```
+
+Kelly slightly outperformed his polls by 3.4%. Google search data successfully predicted the outcome of this election.
+
+<br>
+
+### Washington senate race: Tiffany Smiley vs Patty Murray
+
+```{r, echo = TRUE}
+tab_ms <- matrix(c(49.6,44.9,4.7,57.3,42.7,14.6), ncol=3, byrow=TRUE)
+colnames(tab_ms) <- c('Murray','Smiley','Spread')
+rownames(tab_ms) <- c('Polls','Results')
+tab_ms <- as.table(tab_ms)
+tab_ms
+```
+
+The election results had Murray actually greatly outperforming her polls. Though Google Trends data indicated Murray was the favorite to win, it didn't anticipate how much she would outperform expectations.
+
+```{r, echo = TRUE}
+wa_1 <- wa %>% pivot_wider(names_from = keyword, values_from = hits)
+wa_2 <- wa_1 %>% pivot_longer(cols = c("Smiley Murray polls","Tiffany Smiley vs Patty Murray",
+                                       "Smiley Murray debate","Smiley Murray election",
+                                       "Smiley vs Murray","Smiley vs Murray debate",
+                                       "Smiley vs Murray polls","Tiffany Smiley Patty Murray polls",
+                                       "Tiffany Smiley vs Patty Murray polls"),
+                              names_to = "Smiley",
+                              values_to = "Smiley_hits")
+wa_3 <- wa_2 %>% pivot_longer(cols = c("Murray Smiley polls","Patty Murray vs Tiffany Smiley",
+                                       "Murray Smiley debate","Murray Smiley election",
+                                       "Murray vs Smiley","Murray vs Smiley debate","Murray vs Smiley polls",
+                                       "Patty Murray Tiffany Smiley polls","Patty Murray vs Tiffany Smiley polls"),
+                              names_to = "Murray",
+                              values_to = "Murray_hits")
+wa_4 <- wa_3 %>% pivot_longer(cols = c("Smiley_hits", "Murray_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+wa_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date", y="hits", title = "Murray vs Smiley", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("Patty Murray","Tiffany Smiley"))
+
+wa_mean <- wa_3 %>% 
+  summarize(mean_s = mean(Smiley_hits),
+            mean_m = mean(Murray_hits))
+
+tab_wa_mean <- matrix(c(10.13,10.48), ncol=2, byrow=TRUE)
+colnames(tab_wa_mean) <- c('Smiley','Murray')
+rownames(tab_wa_mean) <- c('Average Google Searches')
+tab_wa_mean <- as.table(tab_wa_mean)
+tab_wa_mean
+
+```
+
+<br>
+
+### North Carolina senate race: Ted Budd vs Cheri Beasley
+
+```{r, echo = TRUE}
+tab_bb <- matrix(c(49.5,45.2,4.3,50.5,47.3,3.2), ncol=3, byrow=TRUE)
+colnames(tab_bb) <- c('Budd','Beasley','Spread')
+rownames(tab_bb) <- c('Polls','Results')
+tab_bb <- as.table(tab_bb)
+tab_bb
+```
+
+The results showed that Beasley slightly out-performed but the results were largely as predicted by polling.
+
+```{r, echo = TRUE}
+nc_1 <- nc %>% pivot_wider(names_from = keyword, values_from = hits)
+nc_2 <- nc_1 %>% pivot_longer(cols = c("Budd Beasley polls","Ted Budd vs Cheri Beasley",
+                                       "Budd Beasley debate","Budd Beasley election",
+                                       "Budd vs Beasley","Budd vs Beasley polls"),
+                              values_to = "Budd_hits")
+nc_3 <- nc_2 %>% pivot_longer(cols = c("Beasley Budd polls","Cheri Beasley vs Ted Budd",
+                                       "Beasley Budd debate","Beasley Budd election",
+                                       "Beasley vs Budd","Beasley vs Budd polls"),
+                              names_to = "Beasley",
+                              values_to = "Beasley_hits")
+nc_4 <- nc_3 %>% pivot_longer(cols = c("Budd_hits", "Beasley_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+nc_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date", y="hits", title = "Budd vs Beasley", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("Cheri Beasley","Ted Budd"))
+
+nc_mean <- nc_3 %>% 
+  summarize(mean_bu = mean(Budd_hits),
+            mean_be = mean(Beasley_hits))
+
+tab_nc_mean <- matrix(c(8.22,10.90), ncol=2, byrow=TRUE)
+colnames(tab_nc_mean) <- c('Budd','Beasley')
+rownames(tab_nc_mean) <- c('Average Google Searches')
+tab_nc_mean <- as.table(tab_nc_mean)
+tab_nc_mean
+```
+
+Though the Google Trends data was inaccurate in predicting the election winner, it did indicate Beasley could outperform polling.
+
+<br>
+
+### Pennslyvania senate race: John Fetterman vs Mehmet Oz
+
+```{r, echo = TRUE}
+tab_fo <- matrix(c(46.9,47.4,0.5,51.2,46.3,4.9), ncol=3, byrow=TRUE)
+colnames(tab_fo) <- c('Fetterman','Oz','Spread')
+rownames(tab_fo) <- c('Polls','Results')
+tab_fo <- as.table(tab_fo)
+tab_fo
+```
+
+Polls had Oz and Fetterman as basically tied going into it. Fetterman ended up outperforming his polling numbers and getting the victory.
+
+Google search data indicated it would be a close race but that Fetterman would end up the victor.
+
+```{r, echo = TRUE}
+pa_1 <- pa %>% pivot_wider(names_from = keyword, values_from = hits)
+pa_2 <- pa_1 %>% pivot_longer(cols = c("Fetterman Oz polls","John Fetterman vs Mehmet Oz",
+                                       "Fetterman Oz debate",
+                                       "Fetterman Oz election","Fetterman vs Oz",
+                                       "Fetterman vs Oz debate","Fetterman vs Oz polls"),
+                              names_to = "Fetterman",
+                              values_to = "Fetterman_hits")
+pa_3 <- pa_2 %>% pivot_longer(cols = c("Oz Fetterman polls","Mehmet Oz vs John Fetterman",
+                                       "Oz Fetterman debate","Oz Fetterman election",
+                                       "Oz vs Fetterman","Oz vs Fetterman debate","Oz vs Fetterman polls"),
+                              names_to = "Oz",
+                              values_to = "Oz_hits")
+pa_4 <- pa_3 %>% pivot_longer(cols = c("Fetterman_hits", "Oz_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+pa_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date", y="hits", title = "Oz vs Fetterman", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("John Fetterman","Mehmet Oz"))
+
+pa_mean <- pa_3 %>%  
+  summarize(mean_f = mean(Fetterman_hits, na.rm = TRUE),
+            mean_o = mean(Oz_hits, na.rm = TRUE))
+
+tab_pa_mean <- matrix(c(9.47,9.26), ncol=2, byrow=TRUE)
+colnames(tab_pa_mean) <- c('Fetterman','Oz')
+rownames(tab_pa_mean) <- c('Average Google Searches')
+tab_pa_mean <- as.table(tab_pa_mean)
+tab_pa_mean
+
+```
+
+<br>
+
+### Nevada senate race: Adam Laxalt vs Catherine Cortez Masto
+
+```{r, echo = TRUE}
+tab_lc <- matrix(c(47.3,45.9,1.4,48,48.9,0.9), ncol=3, byrow=TRUE)
+colnames(tab_lc) <- c('Laxalt','Cortez Masto','Spread')
+rownames(tab_lc) <- c('Polls','Results')
+tab_lc <- as.table(tab_lc)
+tab_lc
+```
+
+Cortez Masto ended up outperforming and edged out Laxalt by 0.9%. My analysis actually had Cortez Masto as the predicted winner and even showed a late surge for her in search interest.
+
+```{r, echo = TRUE}
+nv_1 <- nv %>% pivot_wider(names_from = keyword, values_from = hits)
+nv_2 <- nv_1 %>% pivot_longer(cols = c("Laxalt Masto polls","Laxalt Cortez Masto polls",
+                                       "Adam Laxalt vs Catherine Cortez Masto",
+                                       "Laxalt Cortez Masto election","Laxalt vs Cortez Masto"),
+                              names_to = "Laxalt",
+                              values_to = "Laxalt_hits")
+nv_3 <- nv_2 %>% pivot_longer(cols = c("Masto Laxalt polls","Cortez Masto Laxalt polls",
+                                       "Catherine Cortez Masto vs Adam Laxalt",
+                                       "Cortez Masto Laxalt election","Cortez Masto vs Laxalt"),
+                              names_to = "Masto",
+                              values_to = "Masto_hits")
+nv_4 <- nv_3 %>% pivot_longer(cols = c("Laxalt_hits", "Masto_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+nv_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date", y="hits", title = "Laxalt vs Cortez Masto", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("Adam Laxalt","Catherine Cortez Masto"))
+
+nv_mean <- nv_3 %>% 
+  summarize(mean_m = mean(Masto_hits, na.rm = TRUE),
+            mean_l = mean(Laxalt_hits, na.rm = TRUE))
+
+tab_nv_mean <- matrix(c(8.44,7.94), ncol=2, byrow=TRUE)
+colnames(tab_nv_mean) <- c('Cortez Masto','Laxalt')
+rownames(tab_nv_mean) <- c('Average Google Searches')
+tab_nv_mean <- as.table(tab_nv_mean)
+tab_nv_mean
+```
+
+<br>
+
+### Ohio senate race: JD Vance vs Tim Ryan
+
+```{r, echo = TRUE}
+tab_vr <- matrix(c(50.9,44.7,6.2,53.3,46.7,6.6), ncol=3, byrow=TRUE)
+colnames(tab_vr) <- c('Vance','Ryan','Spread')
+rownames(tab_vr) <- c('Polls','Results')
+tab_vr <- as.table(tab_vr)
+tab_vr
+```
+
+The election results were basically in line with what polling predicted in this senate race.
+
+```{r, echo = TRUE}
+oh_1 <- oh %>% pivot_wider(names_from = keyword, values_from = hits)
+oh_2 <- oh_1 %>% pivot_longer(cols = c("Vance Ryan polls","JD Vance vs Tim Ryan",
+                                       "Vance Ryan debate","Vance Ryan election",
+                                       "Vance vs Ryan","Vance vs Ryan debate","Vance vs Ryan polls",
+                                       "JD Vance Tim Ryan polls","JD Vance vs Tim Ryan polls"),
+                              names_to = "Vance",
+                              values_to = "Vance_hits")
+oh_3 <- oh_2 %>% pivot_longer(cols = c("Ryan Vance polls","Tim Ryan vs JD Vance",
+                                       "Ryan Vance debate","Ryan Vance election",
+                                       "Ryan vs Vance","Ryan vs Vance debate","Ryan vs Vance polls",
+                                       "Tim Ryan JD Vance polls","Tim Ryan vs JD Vance polls"),
+                              names_to = "Ryan",
+                              values_to = "Ryan_hits")
+oh_4 <- oh_3 %>% pivot_longer(cols = c("Vance_hits", "Ryan_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+oh_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date", y="hits", title = "Vance vs Ryan", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("Tim Ryan","JD Vance"))
+
+oh_mean <- oh_3 %>% 
+  summarize(mean_v = mean(Vance_hits, na.rm = TRUE),
+            mean_r = mean(Ryan_hits, na.rm = TRUE))
+
+tab_oh_mean <- matrix(c(9.31,8.89), ncol=2, byrow=TRUE)
+colnames(tab_oh_mean) <- c('Vance','Ryan')
+rownames(tab_oh_mean) <- c('Average Google Searches')
+tab_oh_mean <- as.table(tab_oh_mean)
+tab_oh_mean
+```
+
+My analysis had Vance as the slight favorite and correctly predicted him as the winner.
+
+<br>
+
+### Utah senate race: Mike Lee vs Evan McMullin
+
+```{r, echo = TRUE}
+tab_lm <- matrix(c(48.5,38.7,9.8,53.2,42.8,10.4), ncol=3, byrow=TRUE)
+colnames(tab_lm) <- c('Lee','McMullin','Spread')
+rownames(tab_lm) <- c('Polls','Results')
+tab_lm <- as.table(tab_lm)
+tab_lm
+```
+
+Lee ended up winning and performing in line with polling expectations.
+
+```{r, echo = TRUE}
+ut_1 <- ut %>% pivot_wider(names_from = keyword, values_from = hits)
+ut_2 <- ut_1 %>% pivot_longer(cols = c("Lee McMullin polls","Mike Lee vs Evan McMullin",
+                                       "Lee McMullin debate","Lee McMullin election",
+                                       "Lee vs McMullin","Lee vs McMullin debate",
+                                       "Lee vs McMullin polls","Mike Lee Evan McMullin polls"),
+                              names_to = "Lee",
+                              values_to = "Lee_hits")
+ut_3 <- ut_2 %>% pivot_longer(cols = c("McMullin Lee polls","Evan McMullin vs Mike Lee",
+                                       "McMullin Lee debate","McMullin Lee election",
+                                       "McMullin vs Lee","McMullin vs Lee debate",
+                                       "McMullin vs Lee polls","Evan McMullin Mike Lee polls"),
+                              names_to = "McMullin",
+                              values_to = "McMullin_hits")
+ut_4 <- ut_3 %>% pivot_longer(cols = c("Lee_hits", "McMullin_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+ut_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date", y="hits", title = "Lee vs McMullin", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("Mike Lee","Evan McMullin"))
+
+ut_mean <- ut_3 %>% 
+  summarize(mean_l = mean(Lee_hits, na.rm = TRUE),
+            mean_m = mean(McMullin_hits, na.rm = TRUE))
+
+tab_ut_mean <- matrix(c(10.47,6.52), ncol=2, byrow=TRUE)
+colnames(tab_ut_mean) <- c('Lee','McMullin')
+rownames(tab_ut_mean) <- c('Average Google Searches')
+tab_ut_mean <- as.table(tab_ut_mean)
+tab_ut_mean
+```
+
+My analysis had Lee as a heavy favorite in this race for the Utah senate seat.
+
+<br>
+
+### Florida senate race: Marco Rubio vs Val Demings
+
+```{r, echo = TRUE}
+tab_rd <- matrix(c(52.3,43.5,8.8,57.7,41.3,16.4), ncol=3, byrow=TRUE)
+colnames(tab_rd) <- c('Rubio','Demings','Spread')
+rownames(tab_rd) <- c('Polls','Results')
+tab_rd <- as.table(tab_rd)
+tab_rd
+```
+
+This was a strong out-performance by Rubio.
+
+My analysis also had Rubio very much ahead of Demings in this race.
+
+```{r, echo = TRUE}
+fl_1 <- fl %>% pivot_wider(names_from = keyword, values_from = hits)
+fl_2 <- fl_1 %>% pivot_longer(cols = c("Rubio Demings polls","Marco Rubio vs Val Demings",
+                                       "Rubio Demings debate","Rubio Demings election",
+                                       "Rubio vs Demings","Rubio vs Demings debate",
+                                       "Rubio vs Demings polls"),
+                              names_to = "Rubio",
+                              values_to = "Rubio_hits")
+fl_3 <- fl_2 %>% pivot_longer(cols = c("Demings Rubio polls","Val Demings vs Marco Rubio",
+                                       "Demings Rubio debate","Demings Rubio election",
+                                       "Demings vs Rubio",
+                                       "Demings vs Rubio debate","Demings vs Rubio polls"),
+                              names_to = "Demings",
+                              values_to = "Demings_hits")
+fl_4 <- fl_3 %>% pivot_longer(cols = c("Rubio_hits", "Demings_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+fl_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date", y="hits", title = "Rubio vs Demings", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("Val Demings","Marco Rubio"))
+  
+
+fl_mean <- fl_3 %>% 
+  summarize(mean_r = mean(Rubio_hits, na.rm = TRUE),
+            mean_d = mean(Demings_hits, na.rm = TRUE))
+
+tab_fl_mean <- matrix(c(10.30,7.79), ncol=2, byrow=TRUE)
+colnames(tab_fl_mean) <- c('Rubio','Demings')
+rownames(tab_fl_mean) <- c('Average Google Searches')
+tab_fl_mean <- as.table(tab_fl_mean)
+tab_fl_mean
+
+```
+
+<br>
+
+### Kentucky senate race: Rand Paul vs Charles Booker
+
+```{r, echo = TRUE}
+tab_br <- matrix(c(55,39,16,61.8,38.2,23.6), ncol=3, byrow=TRUE)
+colnames(tab_br) <- c('Paul','Booker','Spread')
+rownames(tab_br) <- c('Polls','Results')
+tab_br <- as.table(tab_br)
+tab_br
+```
+
+This was another strong out-performance, in which Paul ended up getting +7.6% more than expected from the polling numbers, and my analysis also had Paul winning.
+
+```{r, echo = TRUE}
+ky_1 <- ky %>% pivot_wider(names_from = keyword, values_from = hits)
+ky_2 <- ky_1 %>% pivot_longer(cols = c("Paul Booker polls","Rand Paul vs Charles Booker",
+                                       "Paul vs Booker"),
+                              names_to = "Paul",
+                              values_to = "Paul_hits")
+ky_3 <- ky_2 %>% pivot_longer(cols = c("Booker Paul polls","Charles Booker vs Rand Paul",
+                                       "Booker vs Paul"),
+                              names_to = "Booker",
+                              values_to = "Booker_hits")
+ky_4 <- ky_3 %>% pivot_longer(cols = c("Paul_hits", "Booker_hits"),
+                              names_to = "id_hits",
+                              values_to = "combined_hits")
+
+ky_4 %>% 
+  ggplot(aes(x=date,
+             y=combined_hits,
+             color = id_hits)) +
+  geom_smooth(se = F) +
+  theme_classic() +
+  labs(x="date", y="hits", title = "Paul vs Booker", color = "Candidates") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +
+  scale_color_discrete(labels = c("Charles Booker","Rand Paul"))
+
+ky_mean <- ky_3 %>% 
+  summarize(mean_p = mean(Paul_hits, na.rm = TRUE),
+            mean_b = mean(Booker_hits, na.rm = TRUE))
+
+tab_ky_mean <- matrix(c(11.19,9.50), ncol=2, byrow=TRUE)
+colnames(tab_ky_mean) <- c('Paul','Booker')
+rownames(tab_ky_mean) <- c('Average Google Searches')
+tab_ky_mean <- as.table(tab_ky_mean)
+tab_ky_mean
+```
+
+<br>
+
+# Conclusions
+
+My Google Trends analysis successfully predicted 11/12 of the senate races.
+
+### What this analysis should be used for:
+- As a tool to be used with polling data to predict election outcomes
+- As a tool to be used to determine who might outperform their polling numbers
+- To analyze elections that have a lot of Google searches
+
+### What this analysis should NOT be used for:
+- Predicting elections by itself
+- Analyzing congressional races with low interest or little Google search data
+- To analyze elections that have little to no search data due to lack of interest or
+that take place in smaller populated areas
+
+I believe that more data is needed to conclude with certainty that this tool can be used to 
+accurately predict elections, but this analysis is a big step forward.
+
+However, there are some limitations in using Google search data. There are some congressional races
+in smaller populated areas that have less search data. Having less data could skew results and 
+provide inaccurate predictions. There are also some races that just don't garner as much interest
+and would also therefore have less search data to analyze. 
+
+But if there are enough Google searches for an election, I believe this strategy is an excellent choice
+in being able to predict elections while being used alongside polling data.
+
