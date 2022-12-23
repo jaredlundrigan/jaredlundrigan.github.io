@@ -3,7 +3,8 @@ output:
   html_document:
     code_folding: hide
     toc: true
-    toc_float: true
+    toc_float: 
+      collapsed: false
     theme: cerulean
 pagetitle: Predicting Elections Using Google Trends Data
 ---
@@ -53,7 +54,7 @@ This is an example of using Google Trends to see what searches are more popular:
 knitr::include_graphics("googletrendsscreenshot.png")
 ```
 
-I will be using this tool to analyze how popular certain Google searches for different candidates are.
+You can compare search interest for two different keywords in a specific geographic region and see how it changes over time. This is the tool I will be using to analyze how popular certain Google searches are for different candidates in the 2022 Senate elections.
 
 This analysis is based on the theory that the specific type of keyword searches matter in trying to determine how a candidate might perform. Keywords such as simply comparing a candidate's name to another have been shown to be inaccurate in predicting election outcomes. Take the 2022 Georgia senate race for example. "Herschel Walker" was searched for almost 3x as much on average as "Raphael Warnock" yet Warnock walked away the winner of the election.
 
@@ -81,7 +82,7 @@ scale_color_manual(values=c('Red','Blue'))
 
 There are many reasons why the number of Google searches for a candidate's name may not indicate how many people would vote for them. Herschel Walker is famous for being a running back in the NFL and is also considered one of the greatest running backs in college football history. So the search volume for a candidate's name is not a reliable predictor in voter turnout for that candidate.
 
-Instead, I will use a different method, which involves analyzing the order a candidate's name appears in Google searches that have the names of both candidates. For example, someone searching "Walker Warnock polls", or "Warnock Walker election" might indicate who they may vote for. Seth Stephen-Davidowitz, American data scientist and author, and who created this keyword search strategy, explains in an [article](https://newsroom.ucla.edu/stories/ucla-faculty-voice-can-google-searches-predict-elections) for UCLA newsroom: "Our research suggests that a person is significantly more likely to put the candidate they support first in a search that includes both candidates’ names." So the order in which the candidates were searched could indicate who will win the state.
+Instead, I will use a different method from author and data scientist, Seth Stephen-Davidowitz, who explained this strategy in his book, *Everybody Lies: Big Data, New Data, and What the Internet Can Tell Us About Who We Really Are*. His strategy involves analyzing the order a candidate's name appears in Google searches that have the names of both candidates. For example, someone searching "Walker Warnock polls", or "Warnock Walker election" might indicate who they may vote for. Seth Stephen-Davidowitz also explained in an [article](https://newsroom.ucla.edu/stories/ucla-faculty-voice-can-google-searches-predict-elections) for UCLA newsroom: "Our research suggests that a person is significantly more likely to put the candidate they support first in a search that includes both candidates’ names." So the order in which the candidates were searched could indicate who will win the state.
 
 If you live in Georgia and are planning on voting for Raphael Warnock, you might search "Warnock Walker polls" rather than "Walker Warnock polls" because people often subconsciously place the name of their preferred candidate first in a search.
 
@@ -99,16 +100,15 @@ GA <- gtrends(c("Walker Warnock polls",
 
 GA_iot <- GA[["interest_over_time"]]
 ```
-
 I pulled the search data from searches for the terms "Walker Warnock polls" and "Warnock Walker polls" from within the state of Georgia during the 2 months before the election runoff on December 7th, 2022. I also pulled keyword search data from terms such as:
-- "Walker Warnock election"
-- "Warnock Walker debate"
-- "Walker vs Warnock"
-- "Warnock vs Walker polls"
-- "Herschel Walker vs Raphael Warnock"
-- "Raphael Warnock vs Herschel Walker polls
+*"Walker Warnock election"
+*"Warnock Walker debate"
+*"Walker vs Warnock"
+*"Warnock vs Walker polls"
+*"Herschel Walker vs Raphael Warnock"
+*"Raphael Warnock vs Herschel Walker polls
 
-The idea is that, the more search terms you are able to analyze, the more accurate the outcome of the analysis will be. 
+This will be applied to the other 11 Senate races which are included in this analysis. The idea is that, the more search terms you are able to analyze, the more accurate the outcome of the analysis will be. 
 
 ## Analysis of 12 Key Senate Elections
 
@@ -116,9 +116,9 @@ We will compare my Google Trends analysis with polling data and determine if my 
 
 All polling data comes from fivethirtyeight.com and shows the average of polls.
 
-The 'Average Google Searches" you'll see in the tables below or the "hits" you'll see along the y-axis of the graphs indicate how many Google searches for each candidate - where their name came up first. The Google searches or "hits" or based on a scale of 1-100, where the higher the number, the more search interest in a particular term.
+The "Average Google Searches" you'll see in the tables below or the "hits" you'll see along the y-axis of the graphs indicate how many Google searches for each candidate where their name came up first. The Google searches or "hits" are based on a scale of 1-100, where the higher the number, the more search interest in a particular term.
 
-Here are the results of the analysis on all the keywords I pulled from Google Trends for each candidate:
+Here are the results of the analysis of all the keywords I pulled from Google Trends for each candidate:
 
 <br>
 
@@ -236,7 +236,7 @@ tab_wi_mean <- as.table(tab_wi_mean)
 tab_wi_mean
 ```
 
-My analysis rightly predicted Johnson would be win the race, although not by much.
+However, my analysis rightly predicted the overall winner, Johnson, who ended up winning, although not by much.
 
 <br>
 
@@ -412,7 +412,7 @@ tab_bb <- as.table(tab_bb)
 tab_bb
 ```
 
-The results showed that Beasley slightly out-performed but the results were largely as predicted by polling.
+The results showed that Beasley slightly outperformed, but the results were largely as predicted by polling.
 
 ```{r, echo = TRUE}
 nc_1 <- nc %>% pivot_wider(names_from = keyword, values_from = hits)
@@ -680,7 +680,7 @@ tab_rd <- as.table(tab_rd)
 tab_rd
 ```
 
-This was a strong out-performance by Rubio.
+This was a strong outperformance by Rubio.
 
 My analysis also had Rubio very much ahead of Demings in this race.
 
@@ -737,7 +737,7 @@ tab_br <- as.table(tab_br)
 tab_br
 ```
 
-This was another strong out-performance, in which Paul ended up getting +7.6% more than expected from the polling numbers, and my analysis also had Paul winning.
+This was another strong outperformance, in which Paul ended up getting +7.6% more than expected from the polling numbers, and my analysis also had Paul winning.
 
 ```{r, echo = TRUE}
 ky_1 <- ky %>% pivot_wider(names_from = keyword, values_from = hits)
@@ -781,24 +781,22 @@ tab_ky_mean
 My Google Trends analysis successfully predicted 11/12 of the senate races.
 
 ### What this analysis should be used for:
-- As a tool to be used with polling data to predict election outcomes
+- As a tool to be used alongside polling data to predict election outcomes
 - As a tool to be used to determine who might outperform their polling numbers
-- To analyze elections that have a lot of Google searches
+- To analyze elections that garner enough Google search interest so that we have data to work with
 
 ### What this analysis should NOT be used for:
 - Predicting elections by itself
 - Analyzing congressional races with low interest or little Google search data
-- To analyze elections that have little to no search data due to lack of interest or
-that take place in smaller populated areas
+
+Elections that garner very little search interest on Google could be because of several different reasons 
+such as they are in a state with a lower population or because the race is expected to be a blowout and so 
+doesn't get much media attention and therefore less Google search hits.
+
+Basically, this strategy works great if there is enough data from Google Trends for you to analyze.
+
+### Predicting Future Elections:
 
 I believe that more data is needed to conclude with certainty that this tool can be used to 
-accurately predict elections, but this analysis is a big step forward.
-
-However, there are some limitations in using Google search data. There are some congressional races
-in smaller populated areas that have less search data. Having less data could skew results and 
-provide inaccurate predictions. There are also some races that just don't garner as much interest
-and would also therefore have less search data to analyze. 
-
-But if there are enough Google searches for an election, I believe this strategy is an excellent choice
-in being able to predict elections while being used alongside polling data.
+accurately predict elections, but this analysis is a big step forward. It is certainly not perfect and definitely not a precise science. However, this strategy could indicate that a certain candidate might outperform their polling numbers and could even predict an election where the polls got it wrong, such as in the Oz-Fetterman and the Cortez Masto-Laxalt Senate races.
 
