@@ -100,13 +100,7 @@ GA <- gtrends(c("Walker Warnock polls",
 
 GA_iot <- GA[["interest_over_time"]]
 ```
-I pulled the search data from searches for the terms "Walker Warnock polls" and "Warnock Walker polls" from within the state of Georgia during the 2 months before the election runoff on December 7th, 2022. I also pulled keyword search data from terms such as:
-*"Walker Warnock election"
-*"Warnock Walker debate"
-*"Walker vs Warnock"
-*"Warnock vs Walker polls"
-*"Herschel Walker vs Raphael Warnock"
-*"Raphael Warnock vs Herschel Walker polls
+I pulled the search data from searches for the terms "Walker Warnock polls" and "Warnock Walker polls" from within the state of Georgia during the 2 months before the election runoff on December 7th, 2022. I also pulled keyword search data from terms such as: "Walker Warnock election", "Warnock Walker debate", "Walker vs Warnock", "Warnock vs Walker polls", "Herschel Walker vs Raphael Warnock", "Raphael Warnock vs Herschel Walker polls".
 
 This will be applied to the other 11 Senate races which are included in this analysis. The idea is that, the more search terms you are able to analyze, the more accurate the outcome of the analysis will be. 
 
@@ -783,7 +777,7 @@ My Google Trends analysis successfully predicted 11/12 of the senate races.
 ### What this analysis should be used for:
 - As a tool to be used alongside polling data to predict election outcomes
 - As a tool to be used to determine who might outperform their polling numbers
-- To analyze elections that garner enough Google search interest so that we have data to work with
+- To analyze elections that garner enough Google search interest so that we have enough data to work with
 
 ### What this analysis should NOT be used for:
 - Predicting elections by itself
